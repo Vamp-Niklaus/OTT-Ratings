@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up</title>
+    {% load static %}
+    <link rel="stylesheet"  href="{% static 'season.css' %}">
+</head>
+<body>
+
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        <strong>Message:</strong> {{ message }}
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+    <span aria-hidden="true">&times;</span>
+  </button>
+    </div>
+    {% endfor %}
+
+    <section class="h-100 h-custom" style="background-color: #20ceec;">
+        <div class="container py-5 h-100">
+          <div class="row d-flex justify-content-center align-items-center h-100">
+            <div class="col-lg-8 col-xl-6">
+              <div class="card rounded-3">
+                <img src="https://mdbcdn.b-cdn.net/img/Photos/new-templates/bootstrap-registration/img3.webp"
+                  class="w-100" style="border-top-left-radius: .3rem; border-top-right-radius: .3rem;"
+                  alt="Sample photo">
+                <div class="card-body p-4 p-md-5">
+                  <h3 class="mb-4 pb-2 pb-md-0 mb-md-5 px-md-2">Register your account here!</h3>
+
+                  <form class="px-md-2" method="post" action="/signup">
+                        {% csrf_token %}
+
+                    <div class="form-outline mb-4">
+                      <input type="text" id="form3Example1q" class="form-control" name='username' required>
+                      <label class="form-label" for="form3Example1q" >Username</label>
+                    </div>
+                    <div class="form-outline mb-4">
+                      <input type="text" id="form3Example1q" class="form-control" name="fname" required>
+                      <label class="form-label" for="form3Example1q">First Name</label>
+                    </div>
+                    <div class="form-outline mb-4">
+                      <input type="text" id="form3Example1q" class="form-control" name="lname" required>
+                      <label class="form-label" for="form3Example1q">Last Name</label>
+                    </div>
+
+                    <div class="row">
+                      <div class="col-md-6 mb-4">
+
+                        <div class="form-outline datepicker">
+                          <input type="date" class="form-control" id="exampleDatepicker1" name="dob" required>
+                          <label for="exampleDatepicker1" class="form-label">Date of Birth</label>
+                        </div>
+
+                      </div>
+                      <div class="col-md-6 mb-4">
+
+                        <select class="select" name="gender" >
+                          <option value="1" disabled>Gender</option>
+                          <option value="2">Male</option>
+                          <option value="3">Female</option>
+                          {% comment %} <option value="4">Lesbian</option>
+                          <option value="5">Gay</option>
+                          <option value="6">Bisexual</option>
+                          <option value="7">Transgender</option> {% endcomment %}
+                          <option value="8">Other</option>
+                        </select>
+
+                      </div>
+                    </div>
+
+                    <div class="row mb-4 pb-2 pb-md-0 mb-md-5">
+                      <div class="col-md-6">
+
+                        <div class="form-outline">
+                          <input type="email" id="form3Example1w" class="form-control" name="email" required>
+                          <label class="form-label" for="form3Example1w">Email</label>
+                        </div>
+
+                      </div>
+                    </div>
+
+                    <div class="form-outline mb-4">
+                        <input type="password" id="form3Example1q" class="form-control" name="pass1" required>
+                        <label class="form-label" for="form3Example1q">Password</label>
+                      </div>
+    
+                      <div class="form-outline mb-4">
+                        <input type="password" id="form3Example1q" class="form-control" name="pass2" required>
+                        <label class="form-label" for="form3Example1q">Confirm password</label>
+                      </div>
+      
+                    <button type="submit" class="btn btn-success btn-lg mb-1">Submit</button>
+                    <h5>Have already an account ?
+                        <a href ="/signin" style="color: black;text-decoration-line: none;text-align:center">Login here</a>
+                   </h5> 
+        
+                  </form>
+      
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+
+
+</body>
+</html>

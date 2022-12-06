@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block css %}
+.container{
+    display:flex;
+    flex-direction:row;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+.item{
+    width: 250px;
+    border-radius: 6px;
+    box-shadow: 4px 4px 10px 4px grey;
+}
+.item:hover{
+    border-radius: 6px;
+    box-shadow: 10px 10px 20px 10px black;
+}
+img{
+    border-radius: 6px;
+}
+{% endblock css %}
+
+{% block title %}Web-Series{% endblock title %}
+
+{% block body %}
+
+    <div class="container">
+        {% for item in web %}
+        <div class="item my-3">
+            <a href="/seasons/{{item.web_id}}" class="blog-img"
+                style="color: black;text-decoration-line: none;text-align:center">
+                <img class="center" src="/{{item.portrait}}" width="250" alt="...">
+                <h4 class="first-txt">
+                    {{ item.w_name}} ({{item.rating}})</h4>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% endblock body %}

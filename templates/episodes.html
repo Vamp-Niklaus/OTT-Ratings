@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+
+
+{% block title %}Episodes{% endblock title %}
+
+
+{% block body %}
+  <img class="center" src="/{{web.landscape}}" width="1349"  alt="...">
+  <h1 style="text-align:center" ;>{{web.w_name}}  ({{web.rating}})</h1>
+
+
+    <div style="color: black;text-decoration-line: none;text-align:center">
+        <h3 class="first-txt">
+          Season
+          <script>
+            document.write(Math.round(({{ sea.sea_id }}* 100) % 100));
+          </script> ({{sea.rating}})
+        </h3>
+    </div>
+
+    <div class='text-center'>
+      <br>
+
+      <h3>Rate This Season Below</h3>
+      <form method = 'post' action="/ratings">
+        {% csrf_token %}
+        <div class="stars">
+          <input class="star star-10" value="10" id="star-10" type="radio" name="star" required><label class="star star-10" for="star-10"></label>
+          <input class="star star-9" value="9" id="star-9" type="radio" name="star" required><label class="star star-9" for="star-9"></label>
+          <input class="star star-8" value="8" id="star-8" type="radio" name="star" required><label class="star star-8" for="star-8"></label>
+          <input class="star star-7" value="7" id="star-7" type="radio" name="star" required><label class="star star-7" for="star-7"></label>
+          <input class="star star-6" value="6" id="star-6" type="radio" name="star" required><label class="star star-6" for="star-6"></label>
+          <input class="star star-5" value="5" id="star-5" type="radio" name="star" required><label class="star star-5" for="star-5"></label>
+          <input class="star star-4" value="4" id="star-4" type="radio" name="star" required><label class="star star-4" for="star-4"></label>
+          <input class="star star-3" value="3" id="star-3" type="radio" name="star" required><label class="star star-3" for="star-3"></label>
+          <input class="star star-2" value="2" id="star-2" type="radio" name="star" required><label class="star star-2" for="star-2"></label>
+          <input class="star star-1" value="1" id="star-1" type="radio" name="star" required><label class="star star-1" for="star-1"></label>
+          <input type="hidden" name='ron' id ='ron' value="{{sea.sea_id}}">
+        </div>
+        <div class='text-center'>
+          <button style="text-align: center" class="btn btn-primary" type="submit">Submit</button>
+        </div>
+      </form>
+    
+      <br>
+    </div>
+
+
+  <div>
+    {% for item in epi %}
+    <div>
+      <a href="/episode/{{item.epi_id}}" class="blog-img"
+        style="color: black;text-decoration-line: none;text-align:center">
+        <h3 class="first-txt">
+          Episode
+          <script>
+            document.write(Math.round(({{ item.epi_id }}* 10000) % 100));
+          </script> : {{item.e_name}} ({{item.rating}})
+        </h3>
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+
+
+
+
+  <section style="background-color: #e7effd;">
+    <div class="container my-5 py-5 text-dark">
+      <div class="row d-flex justify-content-center">
+        <div class="col-md-11 col-lg-9 col-xl-7">
+          {% for item in com %}
+          <div class="d-flex flex-start mb-4">
+            <div class="card w-100">
+              <div class="card-body p-4">
+                <div>
+                  <h5 style="display:block;float:left;"> {{item.cby.user.username}}</h5>
+                  <p class="small" style="display:block; margin-left:420px">{{item.cat}}</p>
+                  <p>
+                    {{item.c}}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <section style="background-color: #d94125;">
+    <div class="container my-5 py-5 text-dark">
+      <div class="row d-flex justify-content-center">
+        <div class="col-md-10 col-lg-8 col-xl-6">
+          <div class="card">
+            <div class="card-body p-4">
+              <div class="d-flex flex-start w-100">
+                <div class="w-100">
+                  <h5>Add a comment</h5>
+                  <form method = 'post'action="/comments">
+                    {% csrf_token %}
+                    <input type="hidden" name='con' id ='con' value="{{sea.sea_id}}">
+                    <div class="form-outline">
+                      <textarea class="form-control" id="c" rows="3" name="c"></textarea>
+                    </div>
+                    <div class="d-flex justify-content-between mt-3">
+                      <button class="btn btn-primary" type="reset">Reset</button>
+                      <button class="btn btn-primary" type="submit">Submit</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  {% endblock body %}
