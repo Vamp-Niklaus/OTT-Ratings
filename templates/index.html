@@ -1,41 +1,69 @@
 {% extends 'base.html' %}
 
-{% block css %}
-.container{
-    display:flex;
-    flex-direction:row;
-    justify-content: space-between;
-    flex-wrap: wrap;
-}
-.item{
-    width: 250px;
-    border-radius: 6px;
-    box-shadow: 4px 4px 10px 4px grey;
-}
-.item:hover{
-    border-radius: 6px;
-    box-shadow: 10px 10px 20px 10px black;
-}
-img{
-    border-radius: 6px;
-}
-{% endblock css %}
-
 {% block title %}Web-Series{% endblock title %}
 
 {% block body %}
 
-    <div class="container">
-        {% for item in web %}
-        <div class="item my-3">
-            <a href="/seasons/{{item.web_id}}" class="blog-img"
-                style="color: black;text-decoration-line: none;text-align:center">
-                <img class="center" src="/{{item.portrait}}" width="250" alt="...">
-                <h4 class="first-txt">
-                    {{ item.w_name}} ({{item.rating}})</h4>
-            </a>
-        </div>
-        {% endfor %}
-    </div>
+<div class="container-fluid px-4 media-container" id="media-grid">
+    {% include 'partials/media_cards.html' %}
+</div>
 
-    {% endblock body %}
+<div id="loading-spinner" class="text-center my-4 d-none">
+    <div class="spinner-border text-danger" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+</div>
+
+<div id="scroll-anchor"></div>
+
+<script>
+    let currentPage = 1;
+    let isLoading = false;
+    let endOfData = false;
+
+    const observer = new IntersectionObserver(entries => {
+        if (entries[0].isIntersecting && !isLoading && !endOfData) {
+            loadMore();
+        }
+    }, { rootMargin: "200px" });
+
+    observer.observe(document.getElementById('scroll-anchor'));
+
+    function loadMore() {
+        isLoading = true;
+        currentPage++;
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        urlParams.set('page', currentPage);
+        const nextUrl = window.location.pathname + '?' + urlParams.toString();
+
+        document.getElementById('loading-spinner').classList.remove('d-none');
+
+        fetch(nextUrl, {
+            headers: {
+                "X-Requested-With": "XMLHttpRequest"
+            }
+        })
+        .then(response => {
+            if (response.ok) return response.text();
+            throw new Error("Failed to fetch");
+        })
+        .then(html => {
+            if (html.trim() === '') {
+                endOfData = true;
+            } else {
+                document.getElementById('media-grid').insertAdjacentHTML('beforeend', html);
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            endOfData = true;
+        })
+        .finally(() => {
+            isLoading = false;
+            document.getElementById('loading-spinner').classList.add('d-none');
+        });
+    }
+</script>
+
+{% endblock body %}

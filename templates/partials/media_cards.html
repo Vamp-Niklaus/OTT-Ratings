@@ -1,0 +1,12 @@
+{% for item in web %}
+<div class="item my-3">
+    <a href="/media/{{item.content_type}}/{{item.id}}/" class="blog-img"
+        style="color: inherit;text-decoration-line: none;text-align:center">
+        <img class="center poster-img" src="{{item.portrait}}" width="250" alt="...">
+        <h4 class="first-txt text-light mt-2">
+            {{item.w_name}}
+        </h4>
+        <p class="rating-text">⭐ {{item.local_rating|default:"N/A"}}</p>
+    </a>
+</div>
+{% endfor %}

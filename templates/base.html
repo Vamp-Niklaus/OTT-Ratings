@@ -12,6 +12,7 @@
     {% load static %}
     <link rel="stylesheet" href="{% static 'season.css' %}"> 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-Zenh87qX5JnK2Jl0vWa8Ck2rdkQ2Bzep5IDxbcnCeuOxjzrPF/et3URy9Bv1WTRi" crossorigin="anonymous">
+    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css">
     <style>
         {% block css %}{% endblock css %}
     </style>
@@ -22,7 +23,7 @@
 <body>
 
 
-    <nav class="navbar navbar-expand-lg bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container-fluid">
             <div class="collapse navbar-collapse" id="navbarSupportedContent">
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
@@ -32,9 +33,9 @@
                             aria-expanded="false">
                             Category
                         </a>
-                        <ul class="dropdown-menu">
+                        <ul class="dropdown-menu dropdown-menu-dark">
                             {% for item in cat %}
-                            <li><a class="dropdown-item" href="/category/{{item.category}}">{{item.category}}</a></li>
+                            <li><a class="dropdown-item" href="/category/{{item.id}}/">{{item.name}}</a></li>
                             {% endfor%}
                         </ul>
                     </li>
@@ -43,9 +44,9 @@
                             aria-expanded="false">
                             Language
                         </a>
-                        <ul class="dropdown-menu">
+                        <ul class="dropdown-menu dropdown-menu-dark">
                             {% for item in lan %}
-                            <li><a class="dropdown-item" href="/language/{{item.language}}">{{item.language}}</a></li>
+                            <li><a class="dropdown-item" href="/language/{{item.iso_639_1}}/">{{item.english_name}}</a></li>
                             {% endfor%}
                         </ul>
                     </li>
@@ -54,9 +55,9 @@
                             aria-expanded="false">
                             Platform
                         </a>
-                        <ul class="dropdown-menu">
+                        <ul class="dropdown-menu dropdown-menu-dark">
                             {% for item in plat %}
-                            <li><a class="dropdown-item" href="/platform/{{item.platform}}">{{item.platform}}</a></li>
+                            <li><a class="dropdown-item" href="/platform/{{item.provider_id}}/">{{item.provider_name}}</a></li>
                             {% endfor%}
                         </ul>
                     </li>
@@ -66,9 +67,9 @@
                             aria-expanded="false">
                             Release Year
                         </a>
-                        <ul class="dropdown-menu">
+                        <ul class="dropdown-menu dropdown-menu-dark">
                             {% for item in year %}
-                            <li><a class="dropdown-item" href="/year/{{item}}">{{item}}</a></li>
+                            <li><a class="dropdown-item" href="/year/{{item}}/">{{item}}</a></li>
                             {% endfor%}
                         </ul>
                     </li>
@@ -78,9 +79,9 @@
                             aria-expanded="false">
                             Sort By
                         </a>
-                        <ul class="dropdown-menu">
+                        <ul class="dropdown-menu dropdown-menu-dark">
                             {% for item in sort %}
-                            <li><a class="dropdown-item" href="/sort/{{item}}">{{item}}</a></li>
+                            <li><a class="dropdown-item" href="/sort/{{item.id}}/">{{item.name}}</a></li>
                             {% endfor%}
                         </ul>
                     </li>

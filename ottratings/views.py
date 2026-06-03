@@ -1,399 +1,419 @@
 from django.shortcuts import render, redirect
-from datetime import datetime
-from ottratings.models import Contact,Comments,Web,Season,Episode,Users
-from ottratings.models import Ratings,Views,Categories,Languages,Available_on,plat_list,Lang_list,Cat_list
+from ottratings.models import Contact, Comments, Users, Ratings
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
-from django.db.models.signals import pre_save,post_save
-import math
-# Create your views here.
+from django.db.models import Avg
+from . import tmdb
 
+def get_navbar_context():
+    sort_options = [
+        {'id': 'popularity.desc', 'name': 'Popularity'},
+        {'id': 'vote_average.desc', 'name': 'Rating'},
+        {'id': 'primary_release_date.desc', 'name': 'Release Date (Newest)'},
+        {'id': 'primary_release_date.asc', 'name': 'Release Date (Oldest)'}
+    ]
+    return {
+        'cat': tmdb.get_genres(),
+        'lan': tmdb.get_languages(),
+        'plat': tmdb.get_providers(),
+        'year': range(2024, 1887, -1),
+        'sort': sort_options
+    }
+
+def format_tmdb_results(results):
+    formatted = []
+    for item in results:
+        tmdb_id = item.get('id')
+        title = item.get('title', item.get('name', ''))
+        if not tmdb_id or not title or not item.get('poster_path') or item.get('adult') == True:
+            continue
+            
+        release_date = item.get('release_date') or item.get('first_air_date')
+        year = None
+        if release_date and len(release_date) >= 4:
+            try:
+                year = int(release_date[:4])
+            except:
+                pass
+                
+        portrait = f"https://image.tmdb.org/t/p/w500{item.get('poster_path')}" if item.get('poster_path') else None
+        
+        # Calculate local rating if available
+        content_type = 'movie' if 'title' in item else 'tv'
+        local_avg = Ratings.objects.filter(
+            content_type=content_type, 
+            tmdb_id=tmdb_id, 
+            season_number=0, 
+            episode_number=0
+        ).aggregate(Avg('rating'))['rating__avg']
+        
+        local_rating = round(local_avg, 1) if local_avg else round(item.get('vote_average', 0.0), 1)
+        
+        formatted.append({
+            'id': tmdb_id,
+            'w_name': title,
+            'portrait': portrait,
+            'local_rating': local_rating,
+            'content_type': content_type
+        })
+    return formatted
+
+def render_media_list(request, results, context):
+    context['web'] = format_tmdb_results(results)
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return render(request, 'partials/media_cards.html', context)
+    return render(request, 'index.html', context)
 
 def index(request):
-    context={
-        'web':Web.objects.all().order_by("-web_id"),
-        'cat':Cat_list.objects.all(),
-        'lan':Lang_list.objects.all(),
-        'plat':plat_list.objects.all(),
-        'year':range(2000,2023),
-        'sort':['by rating','A-Z','Z-A','Newly Uploaded','Old Uploaded']
-    }
-    return render(request,'index.html',context)
-    # return HttpResponse("this is homepage")
-def seasons(request,web_id):
-    context={
-             'web':Web.objects.get(web_id=web_id),
-             'sea':Season.objects.filter(web_id=web_id),
-             'com':Comments.objects.filter(con=web_id).order_by("-cat"),
-             'users':Users.objects.all(),
-             'cat':Cat_list.objects.all(),
-            'lan':Lang_list.objects.all(),
-            'plat':plat_list.objects.all(),
-            'year':range(2000,2023),
-            'sort':['by rating','A-Z','Z-A','Newly Uploaded','Old Uploaded']
-            }
-    return render(request,'seasons.html',context)
-    # return HttpResponse("this is homepage")
-    
-def episodes(request,sea_id):
-    context={
-            'web':Web.objects.get(web_id=int(float(sea_id))),
-            'sea':Season.objects.get(sea_id=sea_id),
-            'epi':Episode.objects.filter(sea_id=sea_id),
-            'com':Comments.objects.filter(con=sea_id).order_by("-cat"),
-            'users':Users.objects.all(),
-            'cat':Cat_list.objects.all(),
-            'lan':Lang_list.objects.all(),
-            'plat':plat_list.objects.all(),
-            'year':range(2000,2023),
-            'sort':['by rating','A-Z','Z-A','Newly Uploaded','Old Uploaded']
-            }
-    return render(request,'episodes.html',context)
-    # return HttpResponse("this is homepage")
+    page = request.GET.get('page', 1)
+    results = tmdb.fetch_trending(page=page)
+    context = get_navbar_context()
+    return render_media_list(request, results, context)
 
+def media_detail(request, content_type, tmdb_id):
+    if content_type == 'movie':
+        details = tmdb.get_movie_details(tmdb_id)
+    else:
+        details = tmdb.get_tv_details(tmdb_id)
+        
+    if not details:
+        messages.error(request, "Media not found.")
+        return redirect('home')
+        
+    title = details.get('title', details.get('name', ''))
+    landscape = f"https://image.tmdb.org/t/p/w1280{details.get('backdrop_path')}" if details.get('backdrop_path') else None
     
+    local_avg = Ratings.objects.filter(
+        content_type=content_type, 
+        tmdb_id=tmdb_id, 
+        season_number=0, 
+        episode_number=0
+    ).aggregate(Avg('rating'))['rating__avg']
     
-def episode(request,epi_id):
-    context={
-            'web':Web.objects.get(web_id=int(float(epi_id))),
-            'sea':Season.objects.get(sea_id=(int(float(epi_id)*100))/100),
-            'epi':Episode.objects.get(epi_id=epi_id),
-            'com':Comments.objects.filter(con=epi_id).order_by("-cat"),
-            'users':Users.objects.all(),
-            'run_time':str(Episode.objects.get(epi_id=epi_id).run_time),
-            'cat':Cat_list.objects.all(),
-            'lan':Lang_list.objects.all(),
-            'plat':plat_list.objects.all(),
-            'year':range(2000,2023),
-            'sort':['by rating','A-Z','Z-A','Newly Uploaded','Old Uploaded']
-            }
-    return render(request,'episode.html',context)
-    # return HttpResponse("this is homepage")
+    local_rating = round(local_avg, 1) if local_avg else round(details.get('vote_average', 0.0), 1)
     
+    web = {
+        'id': tmdb_id,
+        'w_name': title,
+        'landscape': landscape,
+        'local_rating': local_rating,
+        'content_type': content_type,
+        'overview': details.get('overview', '')
+    }
+    
+    context = get_navbar_context()
+    context['web'] = web
+    context['cast'] = details.get('credits', {}).get('cast', [])[:12]
+    context['com'] = Comments.objects.filter(content_type=content_type, tmdb_id=tmdb_id, season_number=0, episode_number=0).order_by("-cat")
+    
+    if request.user.is_authenticated:
+        user_rating_obj = Ratings.objects.filter(content_type=content_type, tmdb_id=tmdb_id, season_number=0, episode_number=0, rby=request.user.users).first()
+        if user_rating_obj:
+            context['user_rating'] = int(user_rating_obj.rating)
+    
+    if content_type == 'tv':
+        seasons = []
+        for s in details.get('seasons', []):
+            if s.get('season_number') == 0:
+                continue
+            
+            s_local_avg = Ratings.objects.filter(
+                content_type='tv', 
+                tmdb_id=tmdb_id, 
+                season_number=s.get('season_number'), 
+                episode_number=0
+            ).aggregate(Avg('rating'))['rating__avg']
+            
+            s_rating = round(s_local_avg, 1) if s_local_avg else round(s.get('vote_average', 0.0), 1)
+            portrait = f"https://image.tmdb.org/t/p/w500{s.get('poster_path')}" if s.get('poster_path') else "https://via.placeholder.com/500x750?text=No+Poster"
+            
+            seasons.append({
+                'season_number': s.get('season_number'),
+                'w_name': s.get('name'),
+                'local_rating': s_rating,
+                'portrait': portrait,
+                'id': f"{tmdb_id}/season/{s.get('season_number')}",
+                'content_type': 'tv'
+            })
+        context['sea'] = seasons
+        return render(request, 'seasons.html', context)
+    else:
+        return render(request, 'seasons.html', context)
+
+def episodes(request, tmdb_id, season_number):
+    details = tmdb.get_tv_details(tmdb_id)
+    s_details = tmdb.get_tv_season(tmdb_id, season_number)
+    if not details or not s_details:
+        return redirect('home')
+        
+    title = details.get('title', details.get('name', ''))
+    landscape = f"https://image.tmdb.org/t/p/w1280{details.get('backdrop_path')}" if details.get('backdrop_path') else None
+    
+    web_local_avg = Ratings.objects.filter(content_type='tv', tmdb_id=tmdb_id, season_number=0, episode_number=0).aggregate(Avg('rating'))['rating__avg']
+    web_local_rating = round(web_local_avg, 1) if web_local_avg else round(details.get('vote_average', 0.0), 1)
+    
+    web = {'id': tmdb_id, 'w_name': title, 'landscape': landscape, 'local_rating': web_local_rating, 'content_type': 'tv'}
+    
+    s_local_avg = Ratings.objects.filter(content_type='tv', tmdb_id=tmdb_id, season_number=season_number, episode_number=0).aggregate(Avg('rating'))['rating__avg']
+    s_local_rating = round(s_local_avg, 1) if s_local_avg else round(s_details.get('vote_average', 0.0), 1)
+    
+    sea = {'season_number': season_number, 'local_rating': s_local_rating}
+    
+    episodes_list = []
+    for ep in s_details.get('episodes', []):
+        ep_local_avg = Ratings.objects.filter(
+            content_type='tv', 
+            tmdb_id=tmdb_id, 
+            season_number=season_number, 
+            episode_number=ep.get('episode_number')
+        ).aggregate(Avg('rating'))['rating__avg']
+        
+        ep_rating = round(ep_local_avg, 1) if ep_local_avg else round(ep.get('vote_average', 0.0), 1)
+        still = f"https://image.tmdb.org/t/p/w500{ep.get('still_path')}" if ep.get('still_path') else "https://via.placeholder.com/500x281?text=No+Image"
+        
+        episodes_list.append({
+            'episode_number': ep.get('episode_number'),
+            'e_name': ep.get('name'),
+            'local_rating': ep_rating,
+            'portrait': still,
+            'w_name': f"Ep {ep.get('episode_number')}: {ep.get('name')}",
+            'id': f"{tmdb_id}/season/{season_number}/episode/{ep.get('episode_number')}",
+            'content_type': 'tv'
+        })
+        
+    context = get_navbar_context()
+    context['web'] = web
+    context['sea'] = sea
+    context['epi'] = episodes_list
+    context['cast'] = s_details.get('credits', {}).get('cast', [])[:12]
+    context['com'] = Comments.objects.filter(content_type='tv', tmdb_id=tmdb_id, season_number=season_number, episode_number=0).order_by("-cat")
+    
+    if request.user.is_authenticated:
+        user_rating_obj = Ratings.objects.filter(content_type='tv', tmdb_id=tmdb_id, season_number=season_number, episode_number=0, rby=request.user.users).first()
+        if user_rating_obj:
+            context['user_rating'] = int(user_rating_obj.rating)
+    
+    return render(request, 'episodes.html', context)
+
+def episode(request, tmdb_id, season_number, episode_number):
+    details = tmdb.get_tv_details(tmdb_id)
+    s_details = tmdb.get_tv_season(tmdb_id, season_number)
+    ep_details = tmdb.get_tv_episode(tmdb_id, season_number, episode_number)
+    
+    if not details or not ep_details:
+        return redirect('home')
+        
+    title = details.get('title', details.get('name', ''))
+    landscape = f"https://image.tmdb.org/t/p/w1280{details.get('backdrop_path')}" if details.get('backdrop_path') else None
+    
+    web_local_avg = Ratings.objects.filter(content_type='tv', tmdb_id=tmdb_id, season_number=0, episode_number=0).aggregate(Avg('rating'))['rating__avg']
+    web_local_rating = round(web_local_avg, 1) if web_local_avg else round(details.get('vote_average', 0.0), 1)
+    web = {'id': tmdb_id, 'w_name': title, 'landscape': landscape, 'local_rating': web_local_rating, 'content_type': 'tv'}
+    
+    s_local_avg = Ratings.objects.filter(content_type='tv', tmdb_id=tmdb_id, season_number=season_number, episode_number=0).aggregate(Avg('rating'))['rating__avg']
+    s_local_rating = round(s_local_avg, 1) if s_local_avg else round(s_details.get('vote_average', 0.0), 1)
+    sea = {'season_number': season_number, 'local_rating': s_local_rating}
+    
+    ep_local_avg = Ratings.objects.filter(content_type='tv', tmdb_id=tmdb_id, season_number=season_number, episode_number=episode_number).aggregate(Avg('rating'))['rating__avg']
+    ep_local_rating = round(ep_local_avg, 1) if ep_local_avg else round(ep_details.get('vote_average', 0.0), 1)
+    
+    epi = {
+        'episode_number': episode_number,
+        'e_name': ep_details.get('name'),
+        'local_rating': ep_local_rating
+    }
+    
+    context = get_navbar_context()
+    context['web'] = web
+    context['sea'] = sea
+    context['epi'] = epi
+    context['run_time'] = f"{ep_details.get('runtime', 'N/A')} mins"
+    context['overview'] = ep_details.get('overview', '')
+    context['cast'] = ep_details.get('guest_stars', [])[:12]
+    context['com'] = Comments.objects.filter(content_type='tv', tmdb_id=tmdb_id, season_number=season_number, episode_number=episode_number).order_by("-cat")
+    
+    if request.user.is_authenticated:
+        user_rating_obj = Ratings.objects.filter(content_type='tv', tmdb_id=tmdb_id, season_number=season_number, episode_number=episode_number, rby=request.user.users).first()
+        if user_rating_obj:
+            context['user_rating'] = int(user_rating_obj.rating)
+    
+    return render(request, 'episode.html', context)
+
 def comments(request):
     if request.user.is_authenticated:
         if request.method == "POST":
-            cby=User.objects.get(username=request.user).id
-            con= float(request.POST['con'])
-            on_what=Views.objects.get(v_id=con).on_what
-            c= request.POST['c']
-            if len(c)>100:
-                messages.error(request, "Commments must be under 100 charcters!!")
-            elif len(c)<1:
-                messages.error(request, "Comments can't be empty!!")
+            content_type = request.POST.get('content_type')
+            tmdb_id = int(request.POST.get('tmdb_id'))
+            season_number = int(request.POST.get('season_number', 0))
+            episode_number = int(request.POST.get('episode_number', 0))
+            c = request.POST.get('c')
+            
+            if len(c) > 100:
+                messages.error(request, "Comments must be under 100 characters!")
+            elif len(c) < 1:
+                messages.error(request, "Comments can't be empty!")
             else:
-                Comments(0,con,c,cby,cat=datetime.today()).save()
-                messages.success(request, "your comments saved successfully !")
+                Comments.objects.create(
+                    content_type=content_type, 
+                    tmdb_id=tmdb_id, 
+                    season_number=season_number,
+                    episode_number=episode_number,
+                    c=c, 
+                    cby=request.user.users
+                )
+                messages.success(request, "Your comment saved successfully!")
                 
-            if on_what=='web':
-                return redirect('seasons',con)
-            elif on_what=='sea':
-                return redirect('episodes',con)
+            if episode_number > 0:
+                return redirect('episode', tmdb_id=tmdb_id, season_number=season_number, episode_number=episode_number)
+            elif season_number > 0:
+                return redirect('episodes', tmdb_id=tmdb_id, season_number=season_number)
             else:
-                return redirect('episode',con)
+                return redirect('media_detail', content_type=content_type, tmdb_id=tmdb_id)
     else:
-        messages.error(request, "You must be logged in for comment!!")
-        con= float(request.POST['con'])
-        on_what=Views.objects.get(v_id=con).on_what
-        if on_what=='web':
-            return redirect('seasons',con)
-        elif on_what=='sea':
-            return redirect('episodes',con)
-        else:
-            return redirect('episode',con)
+        messages.error(request, "You must be logged in for comment!")
+        return redirect('home')
     
 def ratings(request):
     if request.user.is_authenticated:
         if request.method == "POST":
-            rby=User.objects.get(username=request.user).id
-            ron= float(request.POST['ron'])
-            rating= request.POST['star']
-            os=Views.objects.get(v_id=ron).sum
-            oc=Views.objects.get(v_id=ron).count
-            on_what=Views.objects.get(v_id=ron).on_what
-            entries=Ratings.objects.values_list('rby','ron')
+            content_type = request.POST.get('content_type')
+            tmdb_id = int(request.POST.get('tmdb_id'))
+            season_number = int(request.POST.get('season_number', 0))
+            episode_number = int(request.POST.get('episode_number', 0))
+            star = float(request.POST.get('star'))
             
-            if (rby,ron) in entries:
-                old=Ratings.objects.get(ron=ron,rby=rby).rating
-                Ratings.objects.filter(ron=ron,rby=rby).update(rating=rating)
-                Views.objects.filter(v_id=ron).update(sum=(float(os)+int(rating)-int(old)))
-                messages.success(request, f"Your rating updated from  {str(old)}  to   {str(rating)}.")
-            else:
-                Ratings(ron,rby,rating=rating).save()
-                Views.objects.filter(v_id=ron).update(sum=(float(os)+int(rating)))
-                Views.objects.filter(v_id=ron).update(count=(int(oc)+1))
+            rating_obj, created = Ratings.objects.update_or_create(
+                content_type=content_type,
+                tmdb_id=tmdb_id,
+                season_number=season_number,
+                episode_number=episode_number,
+                rby=request.user.users,
+                defaults={'rating': star}
+            )
             
-            ns=Views.objects.get(v_id=ron).sum
-            nc=Views.objects.get(v_id=ron).count    
-            if on_what=='web':
-                Web.objects.filter(web_id=ron).update(rating=round((float(ns)/int(nc)),1))
-                return redirect('seasons',ron)
-            elif on_what=='sea':
-                Season.objects.filter(sea_id=ron).update(rating=round((float(ns)/int(nc)),1))
-                return redirect('episodes',ron)
+            msg = "Your rating saved successfully!" if created else "Your rating updated successfully!"
+            messages.success(request, msg)
+            
+            if episode_number > 0:
+                return redirect('episode', tmdb_id=tmdb_id, season_number=season_number, episode_number=episode_number)
+            elif season_number > 0:
+                return redirect('episodes', tmdb_id=tmdb_id, season_number=season_number)
             else:
-                Episode.objects.filter(epi_id=ron).update(rating=round((float(ns)/int(nc)),1))
-                return redirect('episode',ron)
+                return redirect('media_detail', content_type=content_type, tmdb_id=tmdb_id)
     else:
         messages.error(request, "You must be logged in for rating!!")
-        ron= float(request.POST['ron'])
-        on_what=Views.objects.get(v_id=ron).on_what
-        if on_what=='web':
-            return redirect('seasons',ron)
-        elif on_what=='sea':
-            return redirect('episodes',ron)
-        else:
-            return redirect('episode',ron)
+        return redirect('home')
+
+def search(request):
+    target = request.GET.get('search', '')
+    page = request.GET.get('page', 1)
+    results = tmdb.search_tmdb(target, page=page)
+    if not results and int(page) == 1:
+        messages.error(request, "Sorry! No Matches Found!")
+        return redirect('home')
         
+    context = get_navbar_context()
+    return render_media_list(request, results, context)
+
+def category(request, rcat):
+    try:
+        genre_id = int(rcat)
+    except:
+        genre_id = None
+        
+    page = request.GET.get('page', 1)
+    results = tmdb.discover_movies(genre_id=genre_id, page=page) + tmdb.discover_tv(genre_id=genre_id, page=page)
+    
+    context = get_navbar_context()
+    return render_media_list(request, results, context)
+
+def platform(request, rplat):
+    try:
+        provider_id = int(rplat)
+    except:
+        provider_id = None
+        
+    page = request.GET.get('page', 1)
+    results = tmdb.discover_movies(provider_id=provider_id, page=page) + tmdb.discover_tv(provider_id=provider_id, page=page)
+    
+    context = get_navbar_context()
+    return render_media_list(request, results, context)
+
+def language(request, rlang):
+    page = request.GET.get('page', 1)
+    results = tmdb.discover_movies(language=rlang, page=page) + tmdb.discover_tv(language=rlang, page=page)
+    
+    context = get_navbar_context()
+    return render_media_list(request, results, context)
+
+def year(request, year):
+    page = request.GET.get('page', 1)
+    results = tmdb.discover_movies(year=year, page=page) + tmdb.discover_tv(year=year, page=page)
+    
+    context = get_navbar_context()
+    return render_media_list(request, results, context)
+
+def sort(request, sort):
+    page = request.GET.get('page', 1)
+    results = tmdb.discover_movies(sort_by=sort, page=page) + tmdb.discover_tv(sort_by=sort, page=page)
+    
+    context = get_navbar_context()
+    return render_media_list(request, results, context)
 
 def signup(request):
     if request.method == "POST":
         username = request.POST['username']
-        fname = request.POST['fname']
-        lname = request.POST['lname']
-        dob = request.POST['dob']
-        gender = request.POST['gender']
-        email = request.POST['email']
         pass1 = request.POST['pass1']
-        pass2 = request.POST['pass2']
         
-        if User.objects.filter(username=username):
-            messages.error(request, "Username already exist! Please try some other username.")
-            return redirect('home')
+        if User.objects.filter(username=username).exists():
+            messages.error(request, "Username already exists! Please try another.")
+            return redirect('signup')
         
-        if User.objects.filter(email=email).exists():
-            messages.error(request, "Email Already Registered!!")
-            return redirect('home')
-        
-        if len(username)>20:
-            messages.error(request, "Username must be under 20 charcters!!")
-            return redirect('home')
-        
-        if pass1 != pass2:
-            messages.error(request, "Passwords didn't matched!!")
-            return redirect('home')
-        
-        if not username.isalnum():
-            messages.error(request, "Username must be Alpha-Numeric!!")
-            return redirect('home')
-        
-        
-        myuser = User.objects.create_user(username, email, pass1)
-        myuser.first_name = fname
-        myuser.last_name = lname
+        myuser = User.objects.create_user(username=username, password=pass1)
         myuser.save()
-        Users(id=User.objects.get(username=username).id,birthday=dob,gender=gender,user_id=User.objects.get(username=username).id).save()
-        messages.success(request, "Your Account has been created succesfully!!")
+        Users.objects.create(user=myuser)
+        messages.success(request, "Your Account has been created successfully!!")
         return redirect('signin')
         
-    return render(request,'signup.html')
+    context = get_navbar_context()
+    return render(request, 'signup.html', context)
 
 def signin(request):
     if request.method == 'POST':
         username = request.POST['username']
         pass1 = request.POST['pass1']
-        
         user = authenticate(username=username, password=pass1)
-        
         if user is not None:
             login(request, user)
-            messages.success(request, "Logged In Sucessfully!!")
+            messages.success(request, "Logged In Successfully!!")
             return redirect('home')
         else:
             messages.error(request, "Bad Credentials!!")
-            return redirect('home')
-    
-    return render(request, "signin.html")
+            return redirect('signin')
+            
+    context = get_navbar_context()
+    return render(request, "signin.html", context)
 
 def signout(request):
     logout(request)
-    messages.success(request,"Logged out sucessfully!")
+    messages.success(request, "Logged out successfully!")
     return redirect('home')
 
-def search(request):
-    target=request.GET['search']
-    rweb=Web.objects.filter(w_name__icontains=target).first()
-    if rweb is None:
-        messages.error(request,"Sorry! No Matches Found!")
-        return redirect('home')
-    else:
-        context={
-        'web':Web.objects.filter(w_name__icontains=target),
-        'cat':Cat_list.objects.all(),
-        'lan':Lang_list.objects.all(),
-        'plat':plat_list.objects.all(),
-        'year':range(2000,2023),
-        'sort':['by rating','A-Z','Z-A','Newly Uploaded','Old Uploaded']
-        }
-        return render(request,'index.html',context)
-    
-def category(request,rcat):
-    rweb=Categories.objects.filter(category=rcat).first()
-    if rweb is None:
-        messages.error(request,"Sorry! No Matches Found!")
-        return redirect('home')
-    else:
-        rid=Categories.objects.filter(category=rcat).values_list('web_id',flat=True)
-        context={
-        'web':Web.objects.filter(web_id__in =rid),
-        'cat':Cat_list.objects.all(),
-        'lan':Lang_list.objects.all(),
-        'plat':plat_list.objects.all(),
-        'year':range(2000,2023),
-        'sort':['by rating','A-Z','Z-A','Newly Uploaded','Old Uploaded']
-        }
-        return render(request,'index.html',context)
-    
-def platform(request,rplat):
-    rweb=Available_on.objects.filter(platform=rplat).first()
-    if rweb is None:
-        messages.error(request,"Sorry! No Matches Found!")
-        return redirect('home')
-    else:
-        rid=Available_on.objects.filter(platform=rplat).values_list('web_id',flat=True)
-        context={
-        'web':Web.objects.filter(web_id__in =rid),
-        'cat':Cat_list.objects.all(),
-        'lan':Lang_list.objects.all(),
-        'plat':plat_list.objects.all(),
-        'year':range(2000,2023),
-        'sort':['by rating','A-Z','Z-A','Newly Uploaded','Old Uploaded']
-        }
-        return render(request,'index.html',context)
-
-
-
-def language(request,rlang):
-    rweb=Languages.objects.filter(language=rlang).first()
-    if rweb is None:
-        messages.error(request,"Sorry! No Matches Found!")
-        return redirect('home')
-    else:
-        rid=Languages.objects.filter(language=rlang).values_list('web_id',flat=True)
-        context={
-        'web':Web.objects.filter(web_id__in =rid),
-        'cat':Cat_list.objects.all(),
-        'lan':Lang_list.objects.all(),
-        'plat':plat_list.objects.all(),
-        'year':range(2000,2023),
-        'sort':['by rating','A-Z','Z-A','Newly Uploaded','Old Uploaded']
-        }
-        return render(request,'index.html',context)
-
 def contact(request):
-    if request.user.is_authenticated:
-        if request.method == "POST":
-            first_name=request.user.first_name
-            last_name=request.user.last_name
-            email = request.user.email
-            reason = request.POST['reason']
-            at=datetime.today()
-            number = request.POST['number']
-            if Contact.objects.filter(customer=request.user.username).first() is None:
-                if len(reason)<1:
-                    messages.error(request, "Sorry you can't send empty message!!")
-                    return redirect('home')
-                elif len(number)<10:
-                    messages.error(request, "Please Fill Complete Numbers!!")
-                    return redirect('home')
-                else:
-                    Contact(c_id=request.user.id,customer=request.user.username,first_name=first_name,last_name=last_name,email=email,reason=reason,at=at,number=number).save()
-                    messages.success(request, "Your message sent successfully!!")   
-                    return redirect('home')
-            else:
-                messages.error(request, "Sorry you can't send message again!!")
-                return redirect('home')
-                
-        else:
-            return render(request,'contact.html')
-    else:
-        messages.error(request, "You must be logged in for Contact Us!!")
+    if request.method == "POST" and request.user.is_authenticated:
+        reason = request.POST['reason']
+        number = request.POST['number']
+        Contact.objects.create(
+            customer=request.user.username,
+            first_name=request.user.first_name,
+            last_name=request.user.last_name,
+            email=request.user.email,
+            reason=reason,
+            number=number
+        )
+        messages.success(request, "Your message sent successfully!!")
         return redirect('home')
-
-def year(request,year):
-    rweb=Web.objects.filter(release_year=year).first()
-    if rweb is None:
-        messages.error(request,"Sorry! No Matches Found!")
-        return redirect('home')
-    else:
-        context={
-        'web':Web.objects.filter(release_year=year),
-        'cat':Cat_list.objects.all(),
-        'lan':Lang_list.objects.all(),
-        'plat':plat_list.objects.all(),
-        'year':range(2000,2023),
-        'sort':['by rating','A-Z','Z-A','Newly Uploaded','Old Uploaded']
-        }
-        return render(request,'index.html',context)
-    
-    
-    
-def sort(request,sort):
-    if sort=='by rating':
-        context={
-        "web":Web.objects.all().order_by("-rating"),
-        'cat':Cat_list.objects.all(),
-        'lan':Lang_list.objects.all(),
-        'plat':plat_list.objects.all(),
-        'year':range(2000,2023),
-        'sort':['by rating','A-Z','Z-A','Newly Uploaded','Old Uploaded']
-        }
-        return render(request,'index.html',context)
-    elif sort=='A-Z':
-        context={
-        "web":Web.objects.all().order_by("w_name"),
-        'cat':Cat_list.objects.all(),
-        'lan':Lang_list.objects.all(),
-        'plat':plat_list.objects.all(),
-        'year':range(2000,2023),
-        'sort':['by rating','A-Z','Z-A','Newly Uploaded','Old Uploaded']
-        }
-        return render(request,'index.html',context)
-    elif sort=='Z-A':
-            context={
-        "web":Web.objects.all().order_by("-w_name"),
-        'cat':Cat_list.objects.all(),
-        'lan':Lang_list.objects.all(),
-        'plat':plat_list.objects.all(),
-        'year':range(2000,2023),
-        'sort':['by rating','A-Z','Z-A','Newly Uploaded','Old Uploaded']
-        }
-            return render(request,'index.html',context)
-    elif sort=='Newly Uploaded':
-        context={
-        "web":Web.objects.all().order_by("-web_id"),
-        'cat':Cat_list.objects.all(),
-        'lan':Lang_list.objects.all(),
-        'plat':plat_list.objects.all(),
-        'year':range(2000,2023),
-        'sort':['by rating','A-Z','Z-A','Newly Uploaded','Old Uploaded']
-        }
-        return render(request,'index.html',context)
-    elif sort=='Old Uploaded':
-        context={
-        "web":Web.objects.all().order_by("web_id"),
-        'cat':Cat_list.objects.all(),
-        'lan':Lang_list.objects.all(),
-        'plat':plat_list.objects.all(),
-        'year':range(2000,2023),
-        'sort':['by rating','A-Z','Z-A','Newly Uploaded','Old Uploaded']
-        }
-        return render(request,'index.html',context)
-    
-    
-def web_post_save(instance, **kwargs):
-    Views(instance.web_id,0,0,'web').save()
-pre_save.connect(web_post_save,sender=Web)
-
-def season_post_save(instance, **kwargs):
-    Views(instance.sea_id,0,0,'sea').save()
-    s=Season.objects.filter(web_id=instance.web_id)
-    Web.objects.filter(web_id=instance.web_id).update(seasons=s)
-pre_save.connect(season_post_save,sender=Season)
-
-def episode_post_save(instance, **kwargs):
-    Views(instance.epi_id,0,0,'epi').save()
-    e=Episode.objects.filter(sea_id=instance.sea_id)
-    Web.objects.filter(web_id=instance.web_id).update(episodes=e)
-pre_save.connect(episode_post_save,sender=Episode)
+        
+    context = get_navbar_context()
+    return render(request, 'contact.html', context)

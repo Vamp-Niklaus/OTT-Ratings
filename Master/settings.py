@@ -10,10 +10,15 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.1/ref/settings/
 """
 
-import django_heroku
+# import django_heroku
 
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+import pymysql
+
+pymysql.install_as_MySQLdb()
+load_dotenv(os.path.join(Path(__file__).resolve().parent.parent, '.env'))
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -24,6 +29,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-55fypkv7#ndim*bo17pnhh*@)dze*$sn7aookk*cqqew8n*v1g'
+
+# TMDB Configuration
+TMDB_API_KEY = os.getenv('TMDB_API_KEY')
+TMDB_BEARER_TOKEN = os.getenv('TMDB_BEARER_TOKEN')
+TMDB_BASE_URL = os.getenv('TMDB_BASE_URL', 'https://api.tmdb.org')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -77,23 +87,27 @@ WSGI_APPLICATION = 'Master.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'project1',
-        'HOST': '127.0.0.1',
-        'PORT': '3306',
-        'USER': 'root',
-        'PASSWORD': '********', 
+        'NAME': os.getenv('Database_name'),
+        'HOST': os.getenv('Host'),
+        'PORT': os.getenv('Port'),
+        'USER': os.getenv('User'),
+        'PASSWORD': os.getenv('Password'), 
     }
 }
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': 'project1',
+#         'HOST': '127.0.0.1',
+#         'PORT': '3306',
+#         'USER': 'root',
+#         'PASSWORD': '********', 
+#     }
+# }
 
 
 # Password validation
@@ -137,11 +151,11 @@ STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
 
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 #  activate django
-django_heroku.settings(locals())
+# django_heroku.settings(locals())

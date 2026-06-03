@@ -1,114 +1,135 @@
 {% extends 'base.html' %}
-
-{% block title %}Seasons{% endblock title %}
-
+{% block title %}{{web.w_name}} - OTT Ratings{% endblock title %}
 
 {% block body %}
-  <img class="center" src="/{{web.landscape}}" width="1349" alt="...">
-  <h1 style="text-align:center" ;>{{web.w_name}} ({{web.rating}})</h1>
+<img class="hero-img" src="{{web.landscape}}" alt="...">
+<div class="hero-title">{{web.w_name}} <span style="font-size: 0.6em; color: var(--netflix-red);">⭐ {{web.local_rating|default:"N/A"}}</span></div>
 
-
-  <div class='text-center'>
-    <br>
-
-    <h3>Rate This Web Series Below</h3>
-  <form method = 'post' action="/ratings">
-    {% csrf_token %}
-    <div class="stars">
-      <input class="star star-10" value="10" id="star-10" type="radio" name="star" required ><label class="star star-10" for="star-10"></label>
-      <input class="star star-9" value="9" id="star-9" type="radio" name="star" required ><label class="star star-9" for="star-9"></label>
-      <input class="star star-8" value="8" id="star-8" type="radio" name="star" required ><label class="star star-8" for="star-8"></label>
-      <input class="star star-7" value="7" id="star-7" type="radio" name="star" required ><label class="star star-7" for="star-7"></label>
-      <input class="star star-6" value="6" id="star-6" type="radio" name="star" required ><label class="star star-6" for="star-6"></label>
-      <input class="star star-5" value="5" id="star-5" type="radio" name="star" required ><label class="star star-5" for="star-5"></label>
-      <input class="star star-4" value="4" id="star-4" type="radio" name="star" required ><label class="star star-4" for="star-4"></label>
-      <input class="star star-3" value="3" id="star-3" type="radio" name="star" required ><label class="star star-3" for="star-3"></label>
-      <input class="star star-2" value="2" id="star-2" type="radio" name="star" required ><label class="star star-2" for="star-2"></label>
-      <input class="star star-1" value="1" id="star-1" type="radio" name="star" required ><label class="star star-1" for="star-1"></label>
-      <input type="hidden" name='ron' id ='ron' value="{{web.web_id}}">
+<div class="detail-layout">
+  <!-- Main Content Area -->
+  <div class="detail-main">
+    
+    {% if web.overview %}
+    <div class="mb-5">
+      <h4>Overview</h4>
+      <p class="text-secondary" style="font-size: 1.1rem; line-height: 1.6;">{{web.overview}}</p>
     </div>
-    <div class='text-center'>
-      <button style="text-align: center" class="btn btn-primary" type="submit">Submit</button>
+    {% endif %}
+
+    {% if cast %}
+    <div class="mb-5">
+      <h4>Top Cast</h4>
+      <div class="carousel-wrapper">
+        <button class="carousel-btn carousel-btn-left" onclick="scrollCarousel('castCarousel', -300)">&#10094;</button>
+        <div class="cast-container" id="castCarousel">
+          {% for actor in cast %}
+          {% if actor.profile_path %}
+          <div class="cast-card">
+            <img class="cast-img" src="https://image.tmdb.org/t/p/w200{{actor.profile_path}}" alt="{{actor.name}}">
+            <div class="cast-name">{{actor.name}}</div>
+            <div class="cast-character">{{actor.character}}</div>
+          </div>
+          {% endif %}
+          {% endfor %}
+        </div>
+        <button class="carousel-btn carousel-btn-right" onclick="scrollCarousel('castCarousel', 300)">&#10095;</button>
+      </div>
     </div>
-  </form>
+    {% endif %}
 
-  <br>
-</div>
-
-
-
-
-  <div>
-    {% for item in sea %}
-    <div>
-      <a href="/episodes/{{item.sea_id}}" class="blog-img"
-        style="color: black;text-decoration-line: none;text-align:center">
-
-        <h3 class="first-txt">
-          Season
-          <script>
-            document.write(Math.round(({{ item.sea_id }}* 100) % 100));
-          </script> ({{item.rating}})
-        </h3>
-      </a>
-    </div>
-    {% endfor %}
-  </div>
-
-
-  <section style="background-color: #e7effd;">
-    <div class="container my-5 py-5 text-dark">
-      <div class="row d-flex justify-content-center">
-        <div class="col-md-11 col-lg-9 col-xl-7">
-          {% for item in com %}
-          <div class="d-flex flex-start mb-4">
-            <div class="card w-100">
-              <div class="card-body p-4">
-                <div>
-                  <h5 style="display:block;float:left;"> {{item.cby.user.username}}</h5>
-                  <p class="small" style="display:block; margin-left:420px">{{item.cat}}</p>
-                  <p>
-                    {{item.c}}
-                  </p>
-                </div>
-              </div>
-            </div>
+    {% if sea %}
+    <div class="mb-5">
+      <h4>Seasons</h4>
+      <div class="carousel-wrapper">
+        <button class="carousel-btn carousel-btn-left" onclick="scrollCarousel('seasonCarousel', -400)">&#10094;</button>
+        <div class="media-carousel" id="seasonCarousel">
+          {% for item in sea %}
+          <div class="item" style="min-width: 150px; max-width: 150px;">
+              <a href="/media/tv/{{web.id}}/season/{{item.season_number}}/" style="color: inherit; text-decoration: none; text-align: center;">
+                  <img class="poster-img" src="{{item.portrait}}" alt="...">
+                  <h4 class="first-txt text-light mt-2" style="white-space: normal; font-size: 0.9rem;">
+                      {{item.w_name}}
+                  </h4>
+                  <p class="rating-text">⭐ {{item.local_rating|default:"N/A"}}</p>
+              </a>
           </div>
           {% endfor %}
         </div>
+        <button class="carousel-btn carousel-btn-right" onclick="scrollCarousel('seasonCarousel', 400)">&#10095;</button>
       </div>
     </div>
-  </section>
+    {% endif %}
+  </div>
 
-
-  <section style="background-color: #d94125;">
-    <div class="container my-5 py-5 text-dark">
-      <div class="row d-flex justify-content-center">
-        <div class="col-md-10 col-lg-8 col-xl-6">
-          <div class="card">
-            <div class="card-body p-4">
-              <div class="d-flex flex-start w-100">
-                <div class="w-100">
-                  <h5>Add a comment</h5>
-                  <form method = 'post'action="/comments">
-                    {% csrf_token %}
-                    <input type="hidden" name='con' id ='con' value="{{web.web_id}}">
-                    <div class="form-outline">
-                      <textarea class="form-control" id="c" rows="3" name="c"></textarea>
-                    </div>
-                    <div class="d-flex justify-content-between mt-3">
-                      <button class="btn btn-primary" type="reset">Reset</button>
-                      <button class="btn btn-primary" type="submit">Submit</button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            </div>
-          </div>
+  <!-- Sidebar Area (Moved to bottom) -->
+  <div class="detail-sidebar mt-5">
+    <!-- Rating Form -->
+    <div class="card p-4 mb-4" style="background-color: var(--netflix-dark-grey); border: 1px solid #333;">
+      <h4 class="text-center mb-3">
+          {% if web.content_type == 'movie' %}Rate This Movie{% else %}Rate This Series{% endif %}
+      </h4>
+      <form method="post" action="/ratings">
+        {% csrf_token %}
+        <div class="stars">
+          <input class="star star-10" value="10" id="star-10" type="radio" name="star" required {% if user_rating == 10 %}checked{% endif %}><label class="star star-10" for="star-10"></label>
+          <input class="star star-9" value="9" id="star-9" type="radio" name="star" required {% if user_rating == 9 %}checked{% endif %}><label class="star star-9" for="star-9"></label>
+          <input class="star star-8" value="8" id="star-8" type="radio" name="star" required {% if user_rating == 8 %}checked{% endif %}><label class="star star-8" for="star-8"></label>
+          <input class="star star-7" value="7" id="star-7" type="radio" name="star" required {% if user_rating == 7 %}checked{% endif %}><label class="star star-7" for="star-7"></label>
+          <input class="star star-6" value="6" id="star-6" type="radio" name="star" required {% if user_rating == 6 %}checked{% endif %}><label class="star star-6" for="star-6"></label>
+          <input class="star star-5" value="5" id="star-5" type="radio" name="star" required {% if user_rating == 5 %}checked{% endif %}><label class="star star-5" for="star-5"></label>
+          <input class="star star-4" value="4" id="star-4" type="radio" name="star" required {% if user_rating == 4 %}checked{% endif %}><label class="star star-4" for="star-4"></label>
+          <input class="star star-3" value="3" id="star-3" type="radio" name="star" required {% if user_rating == 3 %}checked{% endif %}><label class="star star-3" for="star-3"></label>
+          <input class="star star-2" value="2" id="star-2" type="radio" name="star" required {% if user_rating == 2 %}checked{% endif %}><label class="star star-2" for="star-2"></label>
+          <input class="star star-1" value="1" id="star-1" type="radio" name="star" required {% if user_rating == 1 %}checked{% endif %}><label class="star star-1" for="star-1"></label>
+          <input type="hidden" name='tmdb_id' value="{{web.id}}">
+          <input type="hidden" name='content_type' value="{{web.content_type}}">
+          <input type="hidden" name='season_number' value="0">
+          <input type="hidden" name='episode_number' value="0">
         </div>
+        <div class="text-center mt-3">
+          <button class="btn btn-primary w-100" type="submit">Submit Rating</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Comment Form -->
+    <div class="card p-4 mb-4" style="background-color: var(--netflix-dark-grey); border: 1px solid #333;">
+      <h5 class="mb-3">Add a Comment</h5>
+      <form method="post" action="/comments">
+        {% csrf_token %}
+        <input type="hidden" name='tmdb_id' value="{{web.id}}">
+        <input type="hidden" name='content_type' value="{{web.content_type}}">
+        <input type="hidden" name='season_number' value="0">
+        <input type="hidden" name='episode_number' value="0">
+        <div class="form-group mb-3">
+          <textarea class="form-control" id="c" rows="3" name="c" placeholder="Write your review here..." required style="background-color: #222; color: #fff; border: 1px solid #444;"></textarea>
+        </div>
+        <button class="btn btn-primary w-100" type="submit">Post Comment</button>
+      </form>
+    </div>
+
+    <!-- Comments List -->
+    <h4 class="mb-3">Reviews ({{com.count}})</h4>
+    {% for item in com %}
+    <div class="comment-bubble">
+      <div class="comment-header">
+        <span class="comment-author">@{{item.cby.user.username}}</span>
+        <span class="comment-date">{{item.cat|date:"M d, Y"}}</span>
+      </div>
+      <div class="comment-body">
+        {{item.c}}
       </div>
     </div>
-  </section>
-  
+    {% empty %}
+    <p class="text-secondary text-center my-4">No reviews yet. Be the first to review!</p>
+    {% endfor %}
+  </div>
+</div>
 
-  {% endblock body %}
+<script>
+  function scrollCarousel(id, offset) {
+    const container = document.getElementById(id);
+    container.scrollBy({ left: offset, behavior: 'smooth' });
+  }
+</script>
+{% endblock body %}

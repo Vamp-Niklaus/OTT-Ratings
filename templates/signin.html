@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign In</title>
     {% load static %}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet"  href="{% static 'season.css' %}">
 </head>
 <body>
@@ -20,7 +21,7 @@
     {% endfor %}
 
 
-    <section class="vh-100 gradient-custom">
+    <section class="vh-100 cinematic-bg">
         <div class="container py-5 h-100">
           <div class="row d-flex justify-content-center align-items-center h-100">
             <div class="col-12 col-md-8 col-lg-6 col-xl-5">
@@ -40,7 +41,7 @@
                     </div>
       
                     <div class="form-outline form-white mb-4">
-                      <input type="text" id="typePasswordX" class="form-control form-control-lg" name="pass1" />
+                      <input type="password" id="typePasswordX" class="form-control form-control-lg" name="pass1" />
                       <label class="form-label" for="typePasswordX">Password</label>
                     </div>
            
