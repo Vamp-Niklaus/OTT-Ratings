@@ -38,7 +38,7 @@ TMDB_BASE_URL = os.getenv('TMDB_BASE_URL', 'https://api.tmdb.org')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
