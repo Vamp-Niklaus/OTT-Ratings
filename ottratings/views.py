@@ -23,6 +23,20 @@ def get_navbar_context():
 
 def format_tmdb_results(results):
     formatted = []
+    
+    # Collect all tmdb_ids to query them all at once (prevents N+1 query timeouts)
+    tmdb_ids = [item.get('id') for item in results if item.get('id')]
+    
+    # Fetch all average ratings in a single query
+    ratings_qs = Ratings.objects.filter(
+        tmdb_id__in=tmdb_ids, 
+        season_number=0, 
+        episode_number=0
+    ).values('tmdb_id', 'content_type').annotate(avg_rating=Avg('rating'))
+    
+    # Create a quick lookup dictionary: {(tmdb_id, content_type): avg_rating}
+    ratings_dict = {(r['tmdb_id'], r['content_type']): r['avg_rating'] for r in ratings_qs}
+
     for item in results:
         tmdb_id = item.get('id')
         title = item.get('title', item.get('name', ''))
@@ -39,14 +53,9 @@ def format_tmdb_results(results):
                 
         portrait = f"https://image.tmdb.org/t/p/w500{item.get('poster_path')}" if item.get('poster_path') else None
         
-        # Calculate local rating if available
+        # Calculate local rating if available (from dictionary)
         content_type = 'movie' if 'title' in item else 'tv'
-        local_avg = Ratings.objects.filter(
-            content_type=content_type, 
-            tmdb_id=tmdb_id, 
-            season_number=0, 
-            episode_number=0
-        ).aggregate(Avg('rating'))['rating__avg']
+        local_avg = ratings_dict.get((tmdb_id, content_type))
         
         local_rating = round(local_avg, 1) if local_avg else round(item.get('vote_average', 0.0), 1)
         
