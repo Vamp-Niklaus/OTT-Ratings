@@ -40,7 +40,7 @@ def format_tmdb_results(results):
     for item in results:
         tmdb_id = item.get('id')
         title = item.get('title', item.get('name', ''))
-        if not tmdb_id or not title or not item.get('poster_path') or item.get('adult') == True:
+        if not tmdb_id or not title or not item.get('poster_path') or item.get('adult') == True or item.get('vote_count', 0) < 50:
             continue
             
         release_date = item.get('release_date') or item.get('first_air_date')

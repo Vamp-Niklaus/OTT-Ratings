@@ -23,7 +23,7 @@ def search_tmdb(query, page=1):
     return []
 
 def discover_movies(genre_id=None, language=None, provider_id=None, year=None, sort_by=None, page=1):
-    url = f"{settings.TMDB_BASE_URL}/3/discover/movie?include_adult=false&include_video=false&language=en-US&page={page}"
+    url = f"{settings.TMDB_BASE_URL}/3/discover/movie?include_adult=false&include_video=false&vote_count.gte=50&language=en-US&page={page}"
     if genre_id:
         url += f"&with_genres={genre_id}"
     if language:
@@ -43,7 +43,7 @@ def discover_movies(genre_id=None, language=None, provider_id=None, year=None, s
     return []
 
 def discover_tv(genre_id=None, language=None, provider_id=None, year=None, sort_by=None, page=1):
-    url = f"{settings.TMDB_BASE_URL}/3/discover/tv?include_adult=false&include_video=false&language=en-US&page={page}"
+    url = f"{settings.TMDB_BASE_URL}/3/discover/tv?include_adult=false&include_video=false&vote_count.gte=50&language=en-US&page={page}"
     if genre_id:
         url += f"&with_genres={genre_id}"
     if language:
